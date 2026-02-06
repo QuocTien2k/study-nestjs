@@ -17,13 +17,16 @@ export class ValidationPipe implements PipeTransform {
     });
 
     if (errors.length > 0) {
-      const messages = errors.flatMap((err) =>
-        Object.values(err.constraints ?? {}),
+      const formattedErrors = errors.flatMap((err) =>
+        Object.values(err.constraints ?? {}).map((code) => ({
+          field: err.property,
+          code,
+        })),
       );
 
       throw new BadRequestException({
-        message: 'Validation failed',
-        errors: messages,
+        message: 'VALIDATION_FAILED',
+        errors: formattedErrors,
       });
     }
 
