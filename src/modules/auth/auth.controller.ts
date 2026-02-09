@@ -15,6 +15,11 @@ export class AuthController {
   @Post('/login')
   login(@Body(new ValidationPipe()) body: AuthRequest) {
     // debug xem body đã qua validator chưa
-    return body;
+    //return body;
+    try {
+      return this.authService.authenticate(request);
+    } catch (error) {
+      console.error('Error: ', error);
+    }
   }
 }
