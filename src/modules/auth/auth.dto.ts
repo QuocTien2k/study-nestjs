@@ -1,7 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class AuthRequest {
-  @IsString({ message: 'IS_STRING' })
   @IsEmail({}, { message: 'IS_EMAIL' })
   @IsNotEmpty({ message: 'REQUIRED' })
   email: string;
