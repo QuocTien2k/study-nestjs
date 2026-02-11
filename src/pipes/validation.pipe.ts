@@ -17,12 +17,32 @@ export class ValidationPipe implements PipeTransform {
     });
 
     if (errors.length > 0) {
-      const formattedErrors = errors.flatMap((err) =>
-        Object.values(err.constraints ?? {}).map((code) => ({
+      // const formattedErrors = errors.flatMap((err) =>
+      //   Object.values(err.constraints ?? {}).map((code) => ({
+      //     field: err.property,
+      //     code,
+      //   })),
+      // );
+
+      const formattedErrors = errors.map((err) => {
+        const constraints = err.constraints ?? {};
+
+        // Ưu tiên REQUIRED nếu có
+        if (constraints.isNotEmpty) {
+          return {
+            field: err.property,
+            code: constraints.isNotEmpty,
+          };
+        }
+
+        // Nếu không có REQUIRED thì lấy lỗi đầu tiên
+        const firstConstraint = Object.values(constraints)[0];
+
+        return {
           field: err.property,
-          code,
-        })),
-      );
+          code: firstConstraint,
+        };
+      });
 
       throw new BadRequestException({
         message: 'VALIDATION_FAILED',

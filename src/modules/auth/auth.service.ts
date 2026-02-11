@@ -3,14 +3,20 @@ import { AuthRequest } from './auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { LoginResponse } from './auth.interface';
+import { JwtService } from '@nestjs/jwt';
+import { randomBytes } from 'crypto';
 import { UserWithoutPassword } from '../user/user.interface';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   //test potman
-  async authenticate(request: AuthRequest): Promise<UserWithoutPassword> {
+  async authenticate(request: AuthRequest): Promise<LoginResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
@@ -26,8 +32,26 @@ export class AuthService {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
     const { password, ...safeUser } = user;
-    console.log('Login success:', safeUser);
-    return safeUser;
+    //console.log('Login success:', safeUser);
+
+    // 🔐 Tạo payload
+    const payload = {
+      sub: safeUser.id,
+      email: safeUser.email,
+      role: safeUser.role,
+    };
+
+    // 🎟️ Access Token
+    const accessToken = this.jwtService.sign(payload);
+
+    // 🛡️ CSRF Token (tạm thời random string)
+    const csrfToken = randomBytes(32).toString('hex');
+
+    return {
+      user: safeUser,
+      accessToken,
+      csrfToken,
+    };
   }
 
   // ✅ Dùng cho LocalStrategy
