@@ -18,6 +18,14 @@ export class ResponseInterceptor implements NestInterceptor {
           return data;
         }
 
+        //nếu không có giá trị trả về thì không gửi data
+        if (data === undefined || data === null) {
+          return new ApiResponse({
+            status: true,
+            message: 'SUCCESS',
+          });
+        }
+
         return new ApiResponse({
           status: true,
           message: 'SUCCESS',

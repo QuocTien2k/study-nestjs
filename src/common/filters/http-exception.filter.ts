@@ -17,15 +17,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse() as any;
 
-    const message =
-      typeof exceptionResponse === 'string'
-        ? exceptionResponse
-        : (exceptionResponse.message ?? 'Error');
+    let message = 'Error';
+    let errors = undefined;
 
-    const errors =
-      typeof exceptionResponse === 'object'
-        ? exceptionResponse.errors
-        : undefined;
+    if (typeof exceptionResponse === 'string') {
+      message = exceptionResponse;
+    } else if (typeof exceptionResponse === 'object') {
+      if (Array.isArray(exceptionResponse.message)) {
+        message = 'Validation failed';
+        errors = exceptionResponse.message;
+      } else {
+        message = exceptionResponse.message ?? 'Error';
+        errors = exceptionResponse.errors;
+      }
+    }
 
     response.status(status).json(
       new ApiResponse({

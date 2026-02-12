@@ -1,7 +1,7 @@
 import { ApiResponeKey } from 'src/enum/api-response-key.enum';
 import { HttpStatus } from '@nestjs/common';
 
-export class ApiResponse<T = null> {
+export class ApiResponse<T> {
   [ApiResponeKey.STATUS]: boolean;
   [ApiResponeKey.CODE]: number;
   [ApiResponeKey.MESSAGE]: string;
@@ -19,8 +19,15 @@ export class ApiResponse<T = null> {
     this.status = options.status;
     this.code = options.code ?? HttpStatus.OK;
     this.message = options.message;
-    this.data = options.data;
-    this.errors = options.errors;
+    //Không có data → không có field data
+    if (options.data !== undefined) {
+      this.data = options.data;
+    }
+
+    //Không có errors → không có field errors
+    if (options.errors !== undefined) {
+      this.errors = options.errors;
+    }
     this.timestamp = new Date().toISOString();
   }
 }
