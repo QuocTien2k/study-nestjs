@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // payload chính là data bạn sign trong AuthService
+    // payload chính là data đã sign trong AuthService
 
     return {
       id: payload.sub,
