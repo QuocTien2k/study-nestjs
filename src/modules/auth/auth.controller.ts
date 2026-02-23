@@ -4,6 +4,8 @@ import { AuthRequest } from './auth.dto';
 import { ValidationPipe } from 'src/pipes/validation.pipe';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import type { Request } from 'express';
+import { RefreshRequest } from './refresh.dto';
+import { RefreshAuthGuard } from 'src/common/guards/refresh-auth.guard';
 
 // import { AuthGuard } from '@nestjs/passport';
 
@@ -21,5 +23,14 @@ export class AuthController {
   @Get('/profile')
   getProfile() {
     return 'Protected route';
+  }
+
+  @UseGuards(RefreshAuthGuard)
+  @Post('/refresh')
+  refresh(
+    @Body(new ValidationPipe()) body: RefreshRequest,
+    @Req() req: Request,
+  ) {
+    return this.authService.refreshSession(body.refreshToken, req);
   }
 }

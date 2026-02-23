@@ -4,6 +4,7 @@ export interface LoginResponse {
   user: UserWithoutPassword;
   accessToken: string;
   csrfToken: string;
+  refreshToken?: string;
 }
 
 export interface AuthContext {

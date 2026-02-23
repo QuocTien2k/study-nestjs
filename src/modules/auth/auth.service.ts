@@ -16,12 +16,14 @@ import { UserWithoutPassword } from '../user/user.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import type { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
 
@@ -59,6 +61,7 @@ export class AuthService {
     return {
       user,
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       csrfToken,
     };
   }
@@ -100,10 +103,13 @@ export class AuthService {
   private generateTokens(payload: TokenPayload): TokenPair {
     return {
       accessToken: this.jwtService.sign(payload, {
-        expiresIn: '15m',
+        secret: this.configService.get('ACCESS_TOKEN_SECRET'),
+        expiresIn: this.configService.get('ACCESS_TOKEN_EXPIRES'),
       }),
+
       refreshToken: this.jwtService.sign(payload, {
-        expiresIn: '7d',
+        secret: this.configService.get('REFRESH_TOKEN_SECRET'),
+        expiresIn: this.configService.get('REFRESH_TOKEN_EXPIRES'),
       }),
     };
   }
@@ -144,5 +150,68 @@ export class AuthService {
       userAgent,
       deviceId,
     };
+  }
+
+  /* ============== REFRESH TOKEN ============== */
+  async refreshSession(refreshToken: string, req: Request): Promise<TokenPair> {
+    // 1️⃣ verify refresh token
+    let payload: TokenPayload;
+
+    try {
+      payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('REFRESH_TOKEN_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // 2️⃣ rebuild device context
+    const context = this.createAuthContext(req);
+
+    // 3️⃣ load redis session
+    const sessionKey = `session:${payload.sub}:${context.deviceId}`;
+
+    const session = await this.cache.get<SessionData & { jti: string }>(
+      sessionKey,
+    );
+
+    if (!session) {
+      throw new UnauthorizedException('Session not found');
+    }
+
+    // 4️⃣ check jti (ANTI TOKEN REUSE)
+    if (session.jti !== payload.jti) {
+      await this.cache.del(sessionKey);
+      throw new UnauthorizedException('Token reuse detected');
+    }
+
+    // 5️⃣ compare refresh token hash
+    const match = await bcrypt.compare(refreshToken, session.rtHash);
+
+    if (!match) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // 6️⃣ ROTATE TOKEN (VERY IMPORTANT)
+    const newPayload: TokenPayload = {
+      sub: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      jti: randomUUID(),
+    };
+
+    const tokens = this.generateTokens(newPayload);
+
+    const hashedRt = await bcrypt.hash(tokens.refreshToken, 10);
+
+    // 7️⃣ update redis session
+    await this.saveDeviceSession(
+      payload.sub,
+      context.deviceId,
+      newPayload.jti,
+      { rtHash: hashedRt },
+    );
+
+    return tokens;
   }
 }
