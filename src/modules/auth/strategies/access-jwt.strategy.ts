@@ -26,6 +26,7 @@ export class AccessJwtStrategy extends PassportStrategy(
   private createDeviceId(req: Request): string {
     const ip = req.ip;
     const userAgent = req.headers['user-agent'] ?? '';
+    //console.log('UA:', req.headers['user-agent']);
 
     const raw = `${ip}:${userAgent}`;
 

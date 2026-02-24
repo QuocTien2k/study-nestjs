@@ -41,4 +41,12 @@ export class AuthController {
 
     return this.authService.logout(req, user.id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/logout-all')
+  logoutAll(@Req() req: Request) {
+    const user = req.user as any;
+
+    return this.authService.logoutAllDevices(user.id);
+  }
 }

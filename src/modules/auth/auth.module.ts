@@ -8,6 +8,7 @@ import { AccessJwtStrategy } from './strategies/access-jwt.strategy';
 import { CommonModule } from 'src/common/common.module';
 import { ConfigService } from '@nestjs/config';
 import { RefreshJwtStrategy } from './strategies/refresh-jwt.strategy';
+import { RedisProvider } from './redis.provider';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RefreshJwtStrategy } from './strategies/refresh-jwt.strategy';
     LocalStrategy,
     AccessJwtStrategy,
     RefreshJwtStrategy,
+    RedisProvider,
   ],
   exports: [PassportModule, JwtModule],
 })

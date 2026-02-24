@@ -17,6 +17,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { REDIS_CLIENT } from './redis.provider';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cache: Cache,
+    @Inject(REDIS_CLIENT) private redis: any,
   ) {}
 
   //test potman
@@ -32,26 +34,26 @@ export class AuthService {
     request: AuthRequest,
     req: Request,
   ): Promise<LoginResponse> {
-    // 1️⃣ context
+    //context
     const context = this.createAuthContext(req);
     // console.log('DEVICE ID:', context.deviceId);
 
-    // 2️⃣ validate
+    //validate
     const user = await this.validateUser(request.email, request.password);
 
-    // 3️⃣ remove old device session
+    //remove old device session
     await this.cache.del(`session:${user.id}:${context.deviceId}`);
 
-    // 4️⃣ payload
+    //payload
     const payload = this.createTokenPayload(user);
 
-    // 5️⃣ tokens
+    //tokens
     const tokens = this.generateTokens(payload);
 
-    // 6️⃣ csrf
+    //csrf
     const csrfToken = this.generateCsrfToken();
 
-    // 7️⃣ save session (DEVICE BASED)
+    //save session (DEVICE BASED)
     const hashedRt = await bcrypt.hash(tokens.refreshToken, 10);
 
     await this.saveDeviceSession(user.id, context.deviceId, payload.jti, {
@@ -154,7 +156,7 @@ export class AuthService {
 
   /* ============== REFRESH TOKEN ============== */
   async refreshSession(refreshToken: string, req: Request): Promise<TokenPair> {
-    // 1️⃣ verify refresh token
+    //verify refresh token
     let payload: TokenPayload;
 
     try {
@@ -165,10 +167,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // 2️⃣ rebuild device context
+    //rebuild device context
     const context = this.createAuthContext(req);
 
-    // 3️⃣ load redis session
+    //load redis session
     const sessionKey = `session:${payload.sub}:${context.deviceId}`;
 
     const session = await this.cache.get<SessionData & { jti: string }>(
@@ -179,20 +181,20 @@ export class AuthService {
       throw new UnauthorizedException('Session not found');
     }
 
-    // 4️⃣ check jti (ANTI TOKEN REUSE)
+    //check jti (ANTI TOKEN REUSE)
     if (session.jti !== payload.jti) {
       await this.cache.del(sessionKey);
       throw new UnauthorizedException('Token reuse detected');
     }
 
-    // 5️⃣ compare refresh token hash
+    //compare refresh token hash
     const match = await bcrypt.compare(refreshToken, session.rtHash);
 
     if (!match) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // 6️⃣ ROTATE TOKEN (VERY IMPORTANT)
+    //ROTATE TOKEN (VERY IMPORTANT)
     const newPayload: TokenPayload = {
       sub: payload.sub,
       email: payload.email,
@@ -204,7 +206,7 @@ export class AuthService {
 
     const hashedRt = await bcrypt.hash(tokens.refreshToken, 10);
 
-    // 7️⃣ update redis session
+    //update redis session
     await this.saveDeviceSession(
       payload.sub,
       context.deviceId,
@@ -217,17 +219,41 @@ export class AuthService {
 
   /* ============== LOGOUT AND DELETE SESSION IN REDIS ============== */
   async logout(req: Request, userId: number) {
-    // 1️⃣ rebuild device context
+    // rebuild device context
     const context = this.createAuthContext(req);
 
-    // 2️⃣ redis key
+    //redis key
     const sessionKey = `session:${userId}:${context.deviceId}`;
 
-    // 3️⃣ delete session
+    //delete session
     await this.cache.del(sessionKey);
 
     return {
       message: 'Logout success',
+    };
+  }
+
+  /* ============== LOGOUT ALL DEVICES ============== */
+  async logoutAllDevices(userId: number) {
+    const pattern = `session:${userId}:*`;
+
+    let cursor = '0';
+
+    do {
+      const result = await this.redis.scan(cursor, {
+        MATCH: pattern,
+        COUNT: 100,
+      });
+
+      cursor = result.cursor;
+
+      if (result.keys.length) {
+        await this.redis.del(result.keys);
+      }
+    } while (cursor !== '0');
+
+    return {
+      message: 'Logout all devices success',
     };
   }
 }
