@@ -7,7 +7,7 @@
 <h1 align="center">NestJS Self-Study Repository</h1>
 
 <p align="center">
-  Repo ghi lại quá trình <b>tự học NestJS</b> – mỗi commit tương ứng với một buổi học hoặc một tính năng được triển khai.
+  <b>tự học NestJS</b> – mỗi commit tương ứng với một buổi học hoặc một tính năng được triển khai.
 </p>
 
 ---
@@ -16,14 +16,14 @@
 
 Đây là repository cá nhân dùng để:
 
-- Tự học **NestJS từ cơ bản đến nâng cao**
+- Tự học **NestJS**
 - Lưu lại code sau mỗi:
   - Buổi học
   - Bài thực hành
   - Tính năng mới
 - Làm tài liệu tham khảo khi ôn lại hoặc mở rộng dự án sau này
 
-Repo **không hướng tới production**, mục tiêu chính là **học – hiểu – làm chủ NestJS**.
+Repo **không hướng tới production**, mục tiêu chính là **học – hiểu – thực hành NestJS**.
 
 ---
 
@@ -40,7 +40,6 @@ Repo **không hướng tới production**, mục tiêu chính là **học – hi
   - Middleware / Guard / Interceptor
   - Database
   - Authentication & Authorization
-- Viết test (unit test, e2e test)
 - Áp dụng best practices khi xây dựng backend
 
 ---
