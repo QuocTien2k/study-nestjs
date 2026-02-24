@@ -33,4 +33,12 @@ export class AuthController {
   ) {
     return this.authService.refreshSession(body.refreshToken, req);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/logout')
+  logout(@Req() req: Request) {
+    const user = req.user as any;
+
+    return this.authService.logout(req, user.id);
+  }
 }

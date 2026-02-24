@@ -214,4 +214,20 @@ export class AuthService {
 
     return tokens;
   }
+
+  /* ============== LOGOUT AND DELETE SESSION IN REDIS ============== */
+  async logout(req: Request, userId: number) {
+    // 1️⃣ rebuild device context
+    const context = this.createAuthContext(req);
+
+    // 2️⃣ redis key
+    const sessionKey = `session:${userId}:${context.deviceId}`;
+
+    // 3️⃣ delete session
+    await this.cache.del(sessionKey);
+
+    return {
+      message: 'Logout success',
+    };
+  }
 }
